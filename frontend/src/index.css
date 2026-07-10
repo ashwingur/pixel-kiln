@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #16161d;
+  --color-panel: #1f1f29;
+  --color-panel-2: #262633;
+  --color-edge: #34344a;
+  --color-accent: #e8a33d;
+  --color-accent-2: #7dc4ff;
+}
+
+body {
+  @apply bg-bg text-zinc-200 antialiased;
+}
+
+/* Checkerboard behind transparent images */
+.checker {
+  background-image:
+    linear-gradient(45deg, #2a2a35 25%, transparent 25%),
+    linear-gradient(-45deg, #2a2a35 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #2a2a35 75%),
+    linear-gradient(-45deg, transparent 75%, #2a2a35 75%);
+  background-size: 16px 16px;
+  background-position:
+    0 0,
+    0 8px,
+    8px -8px,
+    -8px 0;
+  background-color: #21212b;
+}
+
+.pixelated {
+  image-rendering: pixelated;
+}
+
+input[type="range"] {
+  @apply accent-(--color-accent);
+}
+
+.lbl {
+  @apply flex items-center justify-between gap-2 text-xs text-zinc-400;
+}
+
+.inp {
+  @apply rounded border border-edge bg-panel-2 px-2 py-1 text-sm text-zinc-200 outline-none focus:border-accent;
+}
+
+.btn {
+  @apply cursor-pointer rounded border border-edge bg-panel-2 px-3 py-1.5 text-sm text-zinc-200 transition-colors hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-40;
+}
+
+.btn-primary {
+  @apply cursor-pointer rounded border border-accent bg-accent/15 px-3 py-1.5 text-sm font-semibold text-accent transition-colors hover:bg-accent/25 disabled:cursor-not-allowed disabled:opacity-40;
+}

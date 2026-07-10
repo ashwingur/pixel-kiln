@@ -1,0 +1,25 @@
+[project]
+name = "pixel-kiln-backend"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "pillow>=10.0",
+    "numpy>=1.26",
+    "pixeloe>=0.1.4",
+    "torch>=2.4",
+    "torchvision>=0.19",
+    "python-multipart>=0.0.9",
+    "tqdm>=4.68.4",
+]
+
+# CPU-only torch: the default PyPI linux wheels drag in ~3GB of CUDA libs we don't need.
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
+torchvision = [{ index = "pytorch-cpu" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
