@@ -1,5 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  LuArrowRight,
+  LuDownload,
+  LuGamepad2,
+  LuImagePlus,
+  LuPin,
+  LuTrash2,
+} from "react-icons/lu";
 import { api } from "../api";
 import type { PreviewResult, UploadedImage } from "../api";
 import { ParamPanel } from "../components/ParamPanel";
@@ -39,6 +47,7 @@ export function WorkbenchPage() {
   const [pinned, setPinned] = useState<Pinned | null>(null);
   const [showPinned, setShowPinned] = useState(false);
   const [presetName, setPresetName] = useState("");
+  const [downloadScale, setDownloadScale] = useState(1);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const leftPane = useRef<HTMLDivElement>(null);
@@ -63,6 +72,39 @@ export function WorkbenchPage() {
     },
     [upload],
   );
+
+  // Pasted/dropped images ask before replacing a loaded one; the explicit
+  // file picker never asks (opening it is already a deliberate choice).
+  const [pendingReplace, setPendingReplace] = useState<File | null>(null);
+  const requestLoad = useCallback(
+    (file: File | undefined | null) => {
+      if (!file || !file.type.startsWith("image/")) return;
+      if (source) setPendingReplace(file);
+      else loadFile(file);
+    },
+    [source, loadFile],
+  );
+
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      // Don't hijack pastes into text fields (preset name, folder paths).
+      if (
+        e.target instanceof HTMLElement &&
+        e.target.closest("input, textarea, [contenteditable]")
+      )
+        return;
+      const item = Array.from(e.clipboardData?.items ?? []).find((i) =>
+        i.type.startsWith("image/"),
+      );
+      const file = item?.getAsFile();
+      if (file) {
+        e.preventDefault();
+        requestLoad(file);
+      }
+    };
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, [requestLoad]);
 
   // Re-upload on backend restart (image cache is in-memory).
   const debouncedParams = useDebounced(params, 350);
@@ -102,6 +144,49 @@ export function WorkbenchPage() {
             palette: result.palette,
           }
         : null;
+
+  // Scroll-wheel zoom, anchored on the cursor. React's onWheel is passive, so
+  // attach natively to be able to preventDefault the pane scroll.
+  const zoomRef = useRef(zoom);
+  zoomRef.current = zoom;
+  const pendingScroll = useRef<{ factor: number; cx: number; cy: number } | null>(null);
+  useEffect(() => {
+    const panes = [leftPane.current, rightPane.current].filter(
+      (p): p is HTMLDivElement => !!p,
+    );
+    if (!panes.length) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const dir = e.deltaY < 0 ? 1 : -1;
+      const i = ZOOMS.indexOf(zoomRef.current);
+      const next = ZOOMS[Math.min(ZOOMS.length - 1, Math.max(0, i + dir))];
+      if (next === zoomRef.current) return;
+      const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+      pendingScroll.current = {
+        factor: next / zoomRef.current,
+        cx: e.clientX - rect.left,
+        cy: e.clientY - rect.top,
+      };
+      setZoom(next);
+    };
+    panes.forEach((p) => p.addEventListener("wheel", onWheel, { passive: false }));
+    return () => panes.forEach((p) => p.removeEventListener("wheel", onWheel));
+  }, [source]);
+
+  // Apply the scroll correction after the images have re-rendered at the new
+  // zoom (setting scroll before the resize would clamp against the old size).
+  useLayoutEffect(() => {
+    const p = pendingScroll.current;
+    if (!p) return;
+    pendingScroll.current = null;
+    syncing.current = true;
+    for (const pane of [leftPane.current, rightPane.current]) {
+      if (!pane) continue;
+      pane.scrollLeft = (pane.scrollLeft + p.cx) * p.factor - p.cx;
+      pane.scrollTop = (pane.scrollTop + p.cy) * p.factor - p.cy;
+    }
+    requestAnimationFrame(() => (syncing.current = false));
+  }, [zoom]);
 
   const syncScroll = (from: "left" | "right") => {
     if (syncing.current) return;
@@ -164,7 +249,7 @@ export function WorkbenchPage() {
               title="Delete this preset"
               onClick={() => deletePreset.mutate(presetName.trim())}
             >
-              ✕
+              <LuTrash2 />
             </button>
           </div>
           {savePreset.isSuccess && <span className="text-xs text-green-400">Saved.</span>}
@@ -179,7 +264,7 @@ export function WorkbenchPage() {
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
           e.preventDefault();
-          loadFile(e.dataTransfer.files?.[0]);
+          requestLoad(e.dataTransfer.files?.[0]);
         }}
       >
         {/* Toolbar */}
@@ -194,13 +279,17 @@ export function WorkbenchPage() {
               e.target.value = "";
             }}
           />
-          <button className="btn-primary" onClick={() => fileInputRef.current?.click()}>
-            Open image…
-          </button>
           {source && (
-            <span className="max-w-48 truncate text-xs text-zinc-400" title={source.name}>
-              {source.name} ({source.meta.width}×{source.meta.height})
-            </span>
+            <button
+              className="btn flex max-w-64 items-center gap-2"
+              title="Open a different image"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <LuImagePlus className="shrink-0" />
+              <span className="truncate text-xs">
+                {source.name} ({source.meta.width}×{source.meta.height})
+              </span>
+            </button>
           )}
           <div className="mx-2 h-5 w-px bg-edge" />
           <span className="text-xs text-zinc-400">Zoom</span>
@@ -224,7 +313,7 @@ export function WorkbenchPage() {
               type="checkbox"
               checked={showGrid}
               onChange={(e) => setShowGrid(e.target.checked)}
-              className="accent-(--color-accent)"
+              className="accent-accent"
             />
             Pixel grid
           </label>
@@ -243,7 +332,9 @@ export function WorkbenchPage() {
                 });
             }}
           >
-            📌 Pin
+            <span className="flex items-center gap-1.5">
+              <LuPin /> Pin
+            </span>
           </button>
           <button
             className={`btn ${showPinned ? "border-accent text-accent" : ""}`}
@@ -265,12 +356,19 @@ export function WorkbenchPage() {
         {/* Panes */}
         {!source ? (
           <div className="flex flex-1 items-center justify-center">
-            <div className="rounded-xl border-2 border-dashed border-edge p-16 text-center text-zinc-500">
-              <p className="mb-2 text-4xl">🖼️ → 👾</p>
-              <p>
-                Drop an image here or click <b>Open image…</b>
-              </p>
-            </div>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="group cursor-pointer rounded-xl border-2 border-dashed border-edge p-16 text-center text-zinc-500 transition-colors hover:border-accent hover:text-zinc-300"
+            >
+              <span className="mb-3 flex items-center justify-center gap-3 text-4xl text-zinc-600 transition-colors group-hover:text-accent">
+                <LuImagePlus />
+                <LuArrowRight className="text-2xl" />
+                <LuGamepad2 />
+              </span>
+              <span>
+                Drop an image here, <b>click to open</b>, or paste (Ctrl+V)
+              </span>
+            </button>
           </div>
         ) : (
           <div className="grid min-h-0 flex-1 grid-cols-2 gap-px bg-edge">
@@ -337,16 +435,101 @@ export function WorkbenchPage() {
           )}
           {displayedResult && <PaletteStrip colors={displayedResult.palette} />}
           {displayedResult && (
-            <a
-              href={displayedResult.dataUrl}
-              download={source ? source.name.replace(/\.[^.]+$/, "") + "_pixel.png" : "pixel.png"}
-              className="btn ml-auto"
-            >
-              ⬇ Download PNG
-            </a>
+            <div className="ml-auto flex items-center gap-2">
+              <label className="flex items-center gap-1.5 text-xs text-zinc-400">
+                Scale
+                <select
+                  className="inp"
+                  value={downloadScale}
+                  onChange={(e) => setDownloadScale(Number(e.target.value))}
+                >
+                  {[1, 2, 4, 8, 16].map((s) => (
+                    <option key={s} value={s}>
+                      {s * 100}%
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                className="btn flex items-center gap-1.5"
+                onClick={() =>
+                  downloadResult(
+                    displayedResult,
+                    downloadScale,
+                    source ? source.name.replace(/\.[^.]+$/, "") + "_pixel.png" : "pixel.png",
+                  )
+                }
+              >
+                <LuDownload /> Download PNG
+              </button>
+            </div>
           )}
         </div>
       </section>
+
+      {/* Replace confirmation for pasted / dropped images */}
+      {pendingReplace && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+          onClick={() => setPendingReplace(null)}
+        >
+          <div
+            className="flex w-96 flex-col gap-3 rounded-lg border border-edge bg-panel p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="text-sm font-semibold text-zinc-100">
+              Replace the current image?
+            </span>
+            <p className="text-xs text-zinc-400">
+              <span className="text-zinc-200">{pendingReplace.name || "Pasted image"}</span>{" "}
+              will replace <span className="text-zinc-200">{source?.name}</span> on the
+              workbench. The pinned snapshot will be cleared.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button className="btn" onClick={() => setPendingReplace(null)}>
+                Cancel
+              </button>
+              <button
+                className="btn-primary"
+                onClick={() => {
+                  loadFile(pendingReplace);
+                  setPendingReplace(null);
+                }}
+              >
+                Replace
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+function downloadResult(
+  result: { dataUrl: string; width: number; height: number },
+  scale: number,
+  filename: string,
+) {
+  const trigger = (href: string) => {
+    const a = document.createElement("a");
+    a.href = href;
+    a.download = filename;
+    a.click();
+  };
+  if (scale <= 1) {
+    trigger(result.dataUrl);
+    return;
+  }
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = result.width * scale;
+    canvas.height = result.height * scale;
+    const ctx = canvas.getContext("2d")!;
+    ctx.imageSmoothingEnabled = false; // nearest-neighbor: keep pixels crisp
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    trigger(canvas.toDataURL("image/png"));
+  };
+  img.src = result.dataUrl;
 }

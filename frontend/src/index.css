@@ -1,12 +1,41 @@
 @import "tailwindcss";
 
+/* Default theme: "moss" (Dark Green). Other themes override the variables
+   below via [data-theme] blocks — see theme.ts for the registry. */
 @theme {
+  --color-bg: #111813;
+  --color-panel: #17211a;
+  --color-panel-2: #1e2b22;
+  --color-edge: #2f4636;
+  --color-accent: #7fd08f;
+  --color-accent-2: #e3c56e;
+}
+
+[data-theme="ember"] {
   --color-bg: #16161d;
   --color-panel: #1f1f29;
   --color-panel-2: #262633;
   --color-edge: #34344a;
   --color-accent: #e8a33d;
   --color-accent-2: #7dc4ff;
+}
+
+[data-theme="crimson"] {
+  --color-bg: #191114;
+  --color-panel: #221618;
+  --color-panel-2: #2c1c1f;
+  --color-edge: #462c31;
+  --color-accent: #f07178;
+  --color-accent-2: #ffb86b;
+}
+
+[data-theme="abyss"] {
+  --color-bg: #101420;
+  --color-panel: #161c2c;
+  --color-panel-2: #1c2438;
+  --color-edge: #2b3a55;
+  --color-accent: #7dc4ff;
+  --color-accent-2: #e8a33d;
 }
 
 body {
@@ -34,7 +63,7 @@ body {
 }
 
 input[type="range"] {
-  @apply accent-(--color-accent);
+  @apply accent-accent;
 }
 
 .lbl {

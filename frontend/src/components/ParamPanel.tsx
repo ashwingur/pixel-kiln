@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { LuMinus, LuPlus } from "react-icons/lu";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api";
 import type { DitherMode, DownscaleMode, PaletteSource } from "../api";
@@ -87,6 +88,10 @@ function Slider({
   annotation?: (v: number) => string | null;
 }) {
   const note = annotation?.(value);
+  const nudge = (dir: 1 | -1) => {
+    const next = Number((value + dir * step).toFixed(4));
+    onChange(Math.min(max, Math.max(min, next)));
+  };
   return (
     <label className="flex flex-col gap-1">
       <span className="lbl">
@@ -103,14 +108,33 @@ function Slider({
           suffix={suffix}
         />
       </span>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-      />
+      <span className="flex items-center gap-1.5">
+        <button
+          type="button"
+          className="flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded border border-edge bg-panel-2 text-xs text-zinc-400 hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={value <= min}
+          onClick={() => nudge(-1)}
+        >
+          <LuMinus />
+        </button>
+        <input
+          type="range"
+          className="min-w-0 flex-1"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={(e) => onChange(Number(e.target.value))}
+        />
+        <button
+          type="button"
+          className="flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded border border-edge bg-panel-2 text-xs text-zinc-400 hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={value >= max}
+          onClick={() => nudge(1)}
+        >
+          <LuPlus />
+        </button>
+      </span>
     </label>
   );
 }
@@ -132,7 +156,7 @@ function Check({
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="accent-(--color-accent)"
+        className="accent-accent"
       />
       {label}
     </label>

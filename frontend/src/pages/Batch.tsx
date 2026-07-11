@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { LuCheck, LuX } from "react-icons/lu";
 import { Link } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../api";
@@ -161,7 +162,7 @@ export function BatchPage() {
               type="checkbox"
               checked={skipExisting}
               onChange={(e) => setSkipExisting(e.target.checked)}
-              className="accent-(--color-accent)"
+              className="accent-accent"
             />
             Skip existing
           </label>
@@ -262,13 +263,13 @@ export function BatchPage() {
           <div className="max-h-40 overflow-y-auto font-mono text-xs leading-5 text-zinc-500">
             {[...events].reverse().map((e, i) =>
               e.type === "progress" ? (
-                <p key={i}>
-                  ✔ {e.file}
+                <p key={i} className="flex items-center gap-1.5">
+                  <LuCheck className="shrink-0 text-green-500" /> {e.file}
                   {e.skipped ? " (skipped, exists)" : ""}
                 </p>
               ) : e.type === "file_error" ? (
-                <p key={i} className="text-red-400">
-                  ✘ {e.file}: {e.error}
+                <p key={i} className="flex items-center gap-1.5 text-red-400">
+                  <LuX className="shrink-0" /> {e.file}: {e.error}
                 </p>
               ) : null,
             )}

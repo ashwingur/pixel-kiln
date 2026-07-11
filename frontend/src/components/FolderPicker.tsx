@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { LuArrowUp, LuFolder } from "react-icons/lu";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api";
 
@@ -49,13 +50,13 @@ export function FolderPicker({
                 {listing.data?.path ?? "…"}
               </span>
               <button
-                className="btn"
+                className="btn flex items-center gap-1.5"
                 disabled={!listing.data?.parent}
                 onClick={() =>
                   listing.data?.parent && setBrowsePath(listing.data.parent)
                 }
               >
-                ↑ Up
+                <LuArrowUp /> Up
               </button>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto rounded border border-edge bg-panel-2">
@@ -67,11 +68,11 @@ export function FolderPicker({
               {listing.data?.dirs.map((d) => (
                 <button
                   key={d}
-                  className="block w-full cursor-pointer px-3 py-1.5 text-left text-sm text-zinc-300 hover:bg-panel"
+                  className="flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-left text-sm text-zinc-300 hover:bg-panel"
                   onDoubleClick={() => setBrowsePath(`${listing.data.path}/${d}`)}
                   onClick={() => setBrowsePath(`${listing.data.path}/${d}`)}
                 >
-                  📁 {d}
+                  <LuFolder className="shrink-0 text-accent-2" /> {d}
                 </button>
               ))}
               {listing.data && listing.data.dirs.length === 0 && (

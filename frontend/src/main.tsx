@@ -10,8 +10,10 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import "./index.css";
+import "./theme";
 import { WorkbenchPage } from "./pages/Workbench";
 import { BatchPage } from "./pages/Batch";
+import { SettingsPage } from "./pages/Settings";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
@@ -28,6 +30,7 @@ const rootRoute = createRootRoute({
           {[
             { to: "/", label: "Workbench" },
             { to: "/batch", label: "Batch" },
+            { to: "/settings", label: "Settings" },
           ].map((l) => (
             <Link
               key={l.to}
@@ -58,8 +61,14 @@ const batchRoute = createRoute({
   component: BatchPage,
 });
 
+const settingsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/settings",
+  component: SettingsPage,
+});
+
 const router = createRouter({
-  routeTree: rootRoute.addChildren([workbenchRoute, batchRoute]),
+  routeTree: rootRoute.addChildren([workbenchRoute, batchRoute, settingsRoute]),
 });
 
 declare module "@tanstack/react-router" {
