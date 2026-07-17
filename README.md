@@ -6,8 +6,10 @@ contrast-aware outline expansion + smart downscale), palette reduction in
 Oklab space, optional dithering, and RGBA-correct sprite handling
 (premultiplied resize, hard 1-bit alpha edges, no halo bleed).
 
-Lives inside the soul-warden-online repo for convenience but is fully
-independent (own venv, own node_modules, excluded from repo Prettier/CI).
+Runs entirely on your machine: a FastAPI backend on `:8100` and a
+React/Vite frontend on `:3100`. Single-user, localhost-only — there is no
+auth and the backend can browse folders under your home directory, so don't
+expose it to a network.
 
 ## Run
 
@@ -24,7 +26,8 @@ cd frontend && npm run dev
 ```
 
 First-time setup: `uv sync` in `backend/`, `npm install` in `frontend/`
-(needs [uv](https://docs.astral.sh/uv/); torch is the CPU build, ~200MB).
+(needs [uv](https://docs.astral.sh/uv/); `dev.sh` installs uv itself if
+missing. Torch is the CPU build, ~200MB — no CUDA download).
 
 ## Pages
 
@@ -35,6 +38,7 @@ First-time setup: `uv sync` in `backend/`, `npm install` in `frontend/`
   from the whole folder (consistent set of game assets), dry-run the first 8
   in-browser, then run with live progress. PNG output is indexed
   (palette-mode) when possible.
+- **Settings** — UI theme.
 
 ## Parameters cheat-sheet
 
@@ -67,4 +71,4 @@ uv run python -m app.cli input.png -o out.png --target-size 48 --colors 12 --sca
 - `backend/app/color_utils.py` — Oklab, k-means, dithering, palette parsing
 - `backend/app/main.py` — FastAPI endpoints (preview, presets, fs browse, batch + SSE)
 - `backend/presets/` — saved parameter presets (JSON, gitignored)
-- `frontend/src/pages/{Workbench,Batch}.tsx` — the two pages
+- `frontend/src/pages/{Workbench,Batch}.tsx` — the two main pages
